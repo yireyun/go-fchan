@@ -1,12 +1,14 @@
-package fchan
+package fchan_test
 
 import (
 	"encoding/base64"
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"io"
 	"testing"
 	"time"
+
+	"github.com/yireyun/go-fchan"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type Person struct {
@@ -18,7 +20,7 @@ type Person struct {
 
 func TestTxtWrite(t *testing.T) {
 	t.SkipNow()
-	w := NewTxtFileWrite("FileWriter")
+	w := fchan.NewTxtFileWrite("FileWriter")
 	//fileSync, filePrefix, writeSuffix, renameSuffix string,
 	//rotate, dayend bool, maxLines, maxSize int,
 	//cleaning bool, maxDays int
@@ -41,7 +43,7 @@ func TestTxtWrite(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wLine := NewFileLine()
+		wLine := fchan.NewFileLine()
 		wLine.Line.WriteString(base64.StdEncoding.EncodeToString(buff))
 		e := w.Write(wLine)
 		if e != nil {
@@ -59,7 +61,7 @@ func TestTxtWrite(t *testing.T) {
 
 func TestTxtReadWrite(t *testing.T) {
 	//	t.SkipNow()
-	w := NewTxtFileWrite("FileWrite")
+	w := fchan.NewTxtFileWrite("FileWrite")
 	//fileSync, filePrefix, writeSuffix, renameSuffix string,
 	//rotate, dayend bool, maxLines, maxSize int,
 	//cleaning bool, maxDays int
@@ -68,13 +70,13 @@ func TestTxtReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rw := NewTxtFileReadWrite("TxtFileReadWrite")
+	rw := fchan.NewTxtFileReadWrite("TxtFileReadWrite")
 	err = rw.Open(filename, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wLine := NewFileLine()
+	wLine := fchan.NewFileLine()
 	wLine.Mark = "mark"
 	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
@@ -87,7 +89,7 @@ func TestTxtReadWrite(t *testing.T) {
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 
-	rLine := NewFileLine()
+	rLine := fchan.NewFileLine()
 
 	print := false
 	lineNO := int64(0)

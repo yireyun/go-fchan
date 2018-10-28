@@ -1,13 +1,15 @@
-package fchan
+package fchan_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/yireyun/go-fchan"
 )
 
 func TestBinWriteFile(t *testing.T) {
 	t.SkipNow()
-	w := NewBinFileWrite("Journal")
+	w := fchan.NewBinFileWrite("Journal")
 	var err error
 	//fileSync, filePrefix, writeSuffix, renameSuffix string,
 	//rotate, dayend bool, maxLines, maxSize int,
@@ -27,7 +29,7 @@ func TestBinWriteFile(t *testing.T) {
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
-	line := NewFileLine()
+	line := fchan.NewFileLine()
 	line.Line.Write(msg)
 	line.Mark = "mark"
 	start := time.Now()

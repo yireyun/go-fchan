@@ -1,15 +1,17 @@
-package fchan
+package fchan_test
 
 import (
 	"fmt"
 	"io"
 	"testing"
 	"time"
+
+	"github.com/yireyun/go-fchan"
 )
 
 func TestBinReadWrite(t *testing.T) {
 	//	t.SkipNow()
-	w := NewBinFileWrite("FileWrite")
+	w := fchan.NewBinFileWrite("FileWrite")
 	//fileSync, filePrefix, writeSuffix, renameSuffix string,
 	//rotate, dayend bool, maxLines, maxSize int,
 	//cleaning bool, maxDays int
@@ -18,13 +20,13 @@ func TestBinReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rw := NewBinFileReadWrite("BinFileReadWrite")
+	rw := fchan.NewBinFileReadWrite("BinFileReadWrite")
 	err = rw.Open(filename, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wLine := NewFileLine()
+	wLine := fchan.NewFileLine()
 	wLine.Mark = "mark"
 	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
@@ -37,7 +39,7 @@ func TestBinReadWrite(t *testing.T) {
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 
-	rLine := NewFileLine()
+	rLine := fchan.NewFileLine()
 
 	print := false
 	lineNO := int64(0)
