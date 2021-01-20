@@ -10,13 +10,12 @@ import (
 )
 
 func TestBinReadWrite(t *testing.T) {
-	//	t.SkipNow()
-	w := fchan.NewBinFileWrite("FileWrite")
-	//fileSync, filePrefix, writeSuffix, renameSuffix string,
-	//rotate, dayend bool, maxLines, maxSize int,
-	//cleaning bool, maxDays int
-	filename, err := w.Init(true, "testBinRW", "log", "log", "log", true, true,
-		10000*10+5, 0, false, 3)
+	t.SkipNow()
+	w := fchan.NewBinFileWrite("TestWrite")
+	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
+	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	filename, err := w.Init(true, "TestBinRW", "jour", "jour", "bak",
+		true, true, false, true, 10000*10+5, 0, false, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,9 +84,7 @@ func TestBinReadWrite(t *testing.T) {
 	writeReadWrite()
 
 	N := 10000 * 10
-	writeStop := false
 	go func() {
-		defer func() { writeStop = true }()
 		for i := 0; i <= N; i++ {
 			e := w.Write(wLine)
 			if e != nil {

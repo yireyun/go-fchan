@@ -21,11 +21,10 @@ type Person struct {
 func TestTxtWrite(t *testing.T) {
 	t.SkipNow()
 	w := fchan.NewTxtFileWrite("FileWriter")
-	//fileSync, filePrefix, writeSuffix, renameSuffix string,
-	//rotate, dayend bool, maxLines, maxSize int,
-	//cleaning bool, maxDays int
-	_, err := w.Init(true, "testTxtW", "log", "log", "log", true, true,
-		10000*101, 0, false, 3)
+	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
+	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	_, err := w.Init(true, "testTxtW", "log", "log", "log",
+		true, true, false, true, 10000*101, 0, false, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +60,11 @@ func TestTxtWrite(t *testing.T) {
 
 func TestTxtReadWrite(t *testing.T) {
 	//	t.SkipNow()
-	w := fchan.NewTxtFileWrite("FileWrite")
-	//fileSync, filePrefix, writeSuffix, renameSuffix string,
-	//rotate, dayend bool, maxLines, maxSize int,
-	//cleaning bool, maxDays int
-	filename, err := w.Init(true, "testTxtRW", "log", "log", "log", true, true,
-		10000*10+5, 0, false, 3)
+	w := fchan.NewTxtFileWrite("TestWrite")
+	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
+	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	filename, err := w.Init(true, "testTxtRW", "jour", "jour", "bak",
+		true, true, false, true, 10000*10+5, 0, false, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,9 +133,7 @@ func TestTxtReadWrite(t *testing.T) {
 	writeReadWrite()
 
 	N := 10000 * 10
-	writeStop := false
 	go func() {
-		defer func() { writeStop = true }()
 		for i := 0; i <= N; i++ {
 			e := w.Write(wLine)
 			if e != nil {

@@ -9,13 +9,12 @@ import (
 
 func TestBinWriteFile(t *testing.T) {
 	t.SkipNow()
-	w := fchan.NewBinFileWrite("Journal")
+	w := fchan.NewBinFileWrite("Test")
 	var err error
-	//fileSync, filePrefix, writeSuffix, renameSuffix string,
-	//rotate, dayend bool, maxLines, maxSize int,
-	//cleaning bool, maxDays int
-	_, err = w.Init(true, "testBin", "wrt", "log", "log", true, true,
-		100, 1<<20, true, 3)
+	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
+	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	_, err = w.Init(true, "TestBinWt", "jour", "jour", "bak",
+		true, true, false, true, 100, 1<<20, true, 3)
 	if err != nil {
 		t.Fatal(err)
 	}

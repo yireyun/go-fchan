@@ -2,8 +2,9 @@ package fchan
 
 import (
 	"fmt"
-	"github.com/yireyun/go-fwrite"
 	"strings"
+
+	"github.com/yireyun/go-fwrite"
 )
 
 //只写文件记录器
@@ -37,6 +38,7 @@ func NewTxtFileWrite(name string) *TxtFileWrite {
 	w.cfg.RotateRenameSuffix = true
 	w.cfg.CleanRenameSuffix = true
 	w.cfg.FileLock = true
+	w.cfg.FileEof = nil
 	w.InitFileWriter(name, w.cfg)
 	return w
 }

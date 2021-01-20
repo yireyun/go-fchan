@@ -3,13 +3,14 @@ package fchan
 import (
 	"bytes"
 	"fmt"
-	"github.com/yireyun/go-fwrite"
 	"math"
 	"os"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
+
+	"github.com/yireyun/go-fwrite"
 )
 
 var (
@@ -100,7 +101,8 @@ func (w *FileConfig) GetFileRename(fileName string) (fileRename string, err erro
 		return "", fmt.Errorf("get file name, rriteSuffix is null")
 	}
 
-	if w.RotateRenameSuffix && strings.HasSuffix(fileName, w.RenameSuffix) {
+	if w.RotateRenameSuffix && w.RenameSuffix == w.WriteSuffix &&
+		strings.HasSuffix(fileName, w.RenameSuffix) {
 		return fileName, nil
 	}
 
@@ -112,7 +114,7 @@ func (w *FileConfig) GetFileRename(fileName string) (fileRename string, err erro
 
 	fileRename = fileName + w.RenameSuffix
 	if _, err = os.Lstat(fileRename); err == nil {
-		for num := 1; err == nil && num <= math.MaxInt16; num++ {
+		for num := 1; err == nil && num <= math.MaxInt16; num++ { //出现重名时增加序号
 			fileRename = fmt.Sprintf("%s.%03d%s", fileName, num, w.RenameSuffix)
 			_, err = os.Lstat(fileRename)
 		}
@@ -135,7 +137,7 @@ func (c *FileConfig) GetFileLines(fileName string) (int64, error) {
 //fileName  	是输入文件名
 //fileRename	是输出重命名文件名
 //err       	是输出错误信息
-func (w *FileConfig) GetFileName() (fileName string, err error) {
+func (w *FileConfig) GetNewFileName() (string, error) {
 	if w.FilePrefix == "" {
 		return "", fmt.Errorf("get file name, filePrefix is null")
 	}
@@ -147,12 +149,13 @@ func (w *FileConfig) GetFileName() (fileName string, err error) {
 	}
 	now := time.Now()
 	for num := 1; num <= math.MaxInt16; num++ {
-		fileName = fmt.Sprintf("%s.%s.%03d%s", w.FilePrefix,
-			now.Format("2006-01-02"), num, w.WriteSuffix)
-		fileRename := fmt.Sprintf("%s.%s.%03d%s", w.FilePrefix,
-			now.Format("2006-01-02"), num, w.RenameSuffix)
+		curDate := now.Format("2006-01-02")
+		fileName := fmt.Sprintf("%s.%s.%03d%s", w.FilePrefix, curDate, num, w.WriteSuffix)
+		fileRename := fmt.Sprintf("%s.%s.%03d%s", w.FilePrefix, curDate, num, w.RenameSuffix)
+		fileClean := fmt.Sprintf("%s.%s.%03d%s", w.FilePrefix, curDate, num, w.CleanSuffix)
 		_, fileNameErr := os.Lstat(fileName)
 		_, fileRenameErr := os.Lstat(fileRename)
+		_, fileCleanErr := os.Lstat(fileClean)
 		if w.RotateRename && fileNameErr == nil && w.FileName != fileName { //文件重命名
 			newName, err := w.GetFileRename(fileName)
 			if err == nil {
@@ -165,7 +168,7 @@ func (w *FileConfig) GetFileName() (fileName string, err error) {
 			}
 		}
 
-		if fileNameErr != nil && fileRenameErr != nil {
+		if fileNameErr != nil && fileRenameErr != nil && fileCleanErr != nil {
 			return fileName, nil
 		}
 	}

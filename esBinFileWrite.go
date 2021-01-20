@@ -3,9 +3,10 @@ package fchan
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/yireyun/go-fwrite"
 	"math"
 	"strings"
+
+	"github.com/yireyun/go-fwrite"
 )
 
 //只写文件记录器
@@ -28,9 +29,9 @@ func NewBinFileWrite(name string) *BinFileWrite {
 
 	w.cfg = new(FileConfig)
 	w.cfg.InitAsDefault(name)
-	w.cfg.RotateRenameSuffix = true
-	w.cfg.CleanRenameSuffix = true
-	w.cfg.FileLock = true
+	w.cfg.RotateRenameSuffix = true //初始为 true
+	w.cfg.CleanRenameSuffix = true  //初始为 true
+	w.cfg.FileLock = true           //初始为 true
 	w.InitFileWriter(name, w.cfg)
 	return w
 }

@@ -9,13 +9,12 @@ import (
 
 func TestTxtWriteFile(t *testing.T) {
 	t.SkipNow()
-	w := fchan.NewTxtFileWrite("Journal")
+	w := fchan.NewTxtFileWrite("Test")
 	var err error
-	//fileSync, filePrefix, writeSuffix, renameSuffix string,
-	//rotate, dayend bool, maxLines, maxSize int,
-	//cleaning bool, maxDays int
-	_, err = w.Init(true, "testTxt", "wrt", "log", "log", true, true,
-		100, 1<<20, true, 3)
+	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
+	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	_, err = w.Init(true, "TestTxtWt", "jour", "jour", "bak",
+		true, true, false, true, 50, 1<<20, true, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
