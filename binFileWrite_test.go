@@ -1,20 +1,18 @@
-package fchan_test
+package fchan
 
 import (
 	"testing"
 	"time"
-
-	"github.com/yireyun/go-fchan"
 )
 
 func TestBinWriteFile(t *testing.T) {
-	t.SkipNow()
-	w := fchan.NewBinFileWrite("Test")
+	//t.SkipNow()
+	w := NewBinFileWrite("Test")
 	var err error
 	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
-	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	//rotate, dayend, zeroSize, maxLines, maxSize, clean, maxDays, lastFiler
 	_, err = w.Init(true, "TestBinWt", "jour", "jour", "bak",
-		true, true, false, true, 100, 1<<20, true, 3)
+		true, true, true, 100, 1<<20, true, 3, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,12 +26,12 @@ func TestBinWriteFile(t *testing.T) {
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
 	//	msg = append(msg, []byte("012345678901234567890123456789012345678901234567890123456789")...)
-	line := fchan.NewFileLine()
+	line := NewFileLine()
 	line.Line.Write(msg)
 	line.Mark = "mark"
 	start := time.Now()
 	var oldName, newName string
-	for i := 1; i <= 2*100; i++ {
+	for i := 1; i <= 2*10; i++ {
 		err = w.Write(line)
 		if err != nil {
 			t.Fatal(err)
@@ -47,5 +45,10 @@ func TestBinWriteFile(t *testing.T) {
 	end := time.Now()
 	if d := end.Sub(start); d < time.Second*10 {
 		time.Sleep(d)
+	}
+	if e := w.Close(); e != nil {
+		t.Errorf("Close: %v\n", e)
+	} else {
+		t.Logf("Close: Succ\n")
 	}
 }

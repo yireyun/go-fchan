@@ -1,79 +1,29 @@
-package fchan_test
+package fchan
 
 import (
-	"encoding/base64"
+	"fmt"
 	"io"
 	"testing"
 	"time"
-
-	"github.com/yireyun/go-fchan"
-	"gopkg.in/mgo.v2/bson"
 )
 
-type Person struct {
-	No   int
-	Name string
-	Age  int
-	Sex  int
-}
-
-func TestTxtWrite(t *testing.T) {
-	t.SkipNow()
-	w := fchan.NewTxtFileWrite("FileWriter")
-	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
-	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
-	_, err := w.Init(true, "testTxtW", "log", "log", "log",
-		true, true, false, true, 10000*101, 0, false, 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	N := 100
-
-	p := &Person{
-		No:   1,
-		Name: "hhee",
-		Age:  12,
-		Sex:  1,
-	}
-	for i := 1; i < N; i++ {
-		p.No = i
-		buff, err := bson.Marshal(p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wLine := fchan.NewFileLine()
-		wLine.Line.WriteString(base64.StdEncoding.EncodeToString(buff))
-		e := w.Write(wLine)
-		if e != nil {
-			t.Fatal(e)
-		}
-		time.Sleep(time.Second)
-		if i%10 == 0 {
-			err = w.Rotate()
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-}
-
 func TestTxtReadWrite(t *testing.T) {
-	//	t.SkipNow()
-	w := fchan.NewTxtFileWrite("TestWrite")
+	//t.SkipNow()
+	w := NewTxtFileWrite("TestWrite")
 	//fileSync, filePrefix, writeSuffix, renameSuffix, cleanSuffix,
-	//rotate, dayend, fileZip, zeroSize, maxLines, maxSize, clean, maxDays
+	//rotate, dayend, zeroSize, maxLines, maxSize, clean, maxDays, lastFiler
 	filename, err := w.Init(true, "testTxtRW", "jour", "jour", "bak",
-		true, true, false, true, 10000*10+5, 0, false, 3)
+		true, true, true, 10000*10+5, 0, false, 3, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rw := fchan.NewTxtFileReadWrite("TxtFileReadWrite")
+	rw := NewTxtFileReadWrite("TxtFileReadWrite")
 	err = rw.Open(filename, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wLine := fchan.NewFileLine()
+	wLine := NewFileLine()
 	wLine.Mark = "mark"
 	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
@@ -86,9 +36,9 @@ func TestTxtReadWrite(t *testing.T) {
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 	//	wLine.Line.WriteString("\t文件日志，文件日志，文件日志，文件日志，文件日志，文件日志。\n")
 
-	rLine := fchan.NewFileLine()
+	rLine := NewFileLine()
 
-	print := false
+	isPrint := false
 	lineNO := int64(0)
 	writeReadWrite := func() {
 		e := w.Write(wLine)
@@ -97,7 +47,7 @@ func TestTxtReadWrite(t *testing.T) {
 		} else {
 			lineNO++
 		}
-		if print {
+		if isPrint {
 			fmt.Printf("Write:%+v\n", wLine)
 		}
 		e = rw.Read(rLine)
@@ -105,16 +55,17 @@ func TestTxtReadWrite(t *testing.T) {
 			t.Fatal(e)
 		}
 		if lineNO != rLine.LineNO {
-			t.Fatalf("lineNO: expect %d is not %d", lineNO, rLine.LineNO)
+			t.Fatalf("lineNO: expect %d is not %d\n%v\n",
+				lineNO, rLine.LineNO, rLine.String())
 		}
-		if print {
+		if isPrint {
 			fmt.Printf("Read :%+v\n", rLine)
 		}
 		e = rw.Mark(rLine, "Ok")
 		if e != nil {
 			t.Fatal(e)
 		}
-		if print {
+		if isPrint {
 			fmt.Printf("Mark :%+v\n", rLine)
 		}
 	}
@@ -131,9 +82,12 @@ func TestTxtReadWrite(t *testing.T) {
 
 	writeReadWrite()
 
-	N := 10000 * 10
+	N := 100 * 10
 	go func() {
-		for i := 0; i <= N; i++ {
+		defer func() {
+			w.Close()
+		}()
+		for i := 0; i < N; i++ {
 			e := w.Write(wLine)
 			if e != nil {
 				t.Fatal(e)
@@ -145,7 +99,7 @@ func TestTxtReadWrite(t *testing.T) {
 		defer func() { readStopC <- 0 }()
 
 		record := 0
-		for record < N {
+		for record <= N { //多读尾行EOF
 			e := rw.Read(rLine)
 			if e == io.EOF {
 				if rw.Locked() {
@@ -162,9 +116,15 @@ func TestTxtReadWrite(t *testing.T) {
 				lineNO++
 				record++
 			}
+
+			if rLine.IsEof {
+				t.Logf("Read '%s' EOF\n", rLine.FileName)
+				return
+			}
+
 			if lineNO != rLine.LineNO {
-				fmt.Printf("Read :%+v\n", rLine)
-				t.Fatalf("lineNO: expect %d is not %d", lineNO, rLine.LineNO)
+				t.Fatalf("lineNO: expect %d is not %d\n%v\n",
+					lineNO, rLine.LineNO, rLine.String())
 			}
 
 			if record%10 == 0 {

@@ -15,6 +15,7 @@ import (
 type BinFileReadWrite struct {
 	Name     string
 	fileName string
+	fileCfg  *FileConfig
 	flock    flock.Flocker
 	fd       *os.File
 	reader   *bufio.Reader
@@ -22,6 +23,7 @@ type BinFileReadWrite struct {
 	lineHead []byte
 	lineTail []byte
 	lineMark string
+	lineEof  *FileLine
 }
 
 //创建文件记录器
@@ -30,10 +32,91 @@ type BinFileReadWrite struct {
 func NewBinFileReadWrite(name string) *BinFileReadWrite {
 	rw := new(BinFileReadWrite)
 	rw.Name = name
+	rw.fileCfg = new(FileConfig)
 	rw.lineHead = []byte(TxtLineHead)
 	rw.lineTail = []byte(TxtLineTail)
 	rw.lineMark = LineMark
+	rw.lineEof = NewFileLine()
 	return rw
+}
+
+//初始化
+//fileSync  	是输入是否同步写文件
+//filePrefix	是输入文件前缀
+//writeSuffix   是输入正在写文件后缀
+//renameSuffix  是输入重命名文件后缀
+//cleanSuffix	是输入清理文件名后缀
+//cleaning     	是输入是否清理历史
+//maxDays		是输入最大天数,最小为3天
+func (rw *BinFileReadWrite) Init(fileSync bool,
+	filePrefix, writeSuffix, renameSuffix, cleanSuffix string,
+	cleaning bool, maxDays int) (fileName string, err error) {
+
+	prefix := func(s string) string {
+		s = strings.TrimSpace(s)
+		if l := len(s); l > 0 && s[l-1] == '.' {
+			return s[:l-1]
+		} else {
+			return s
+		}
+	}
+
+	suffix := func(s string) string {
+		s = strings.TrimSpace(s)
+		if l := len(s); l > 0 && s[0] != '.' {
+			return "." + s
+		} else {
+			return s
+		}
+	}
+	filePrefix = prefix(filePrefix)
+	if filePrefix == "" {
+		return "", errorf("filePrefix is null")
+	}
+	writeSuffix = suffix(writeSuffix)
+	if writeSuffix == "" {
+		return "", errorf("writeSuffix is null")
+	}
+	renameSuffix = suffix(renameSuffix)
+	if renameSuffix == "" {
+		return "", errorf("renameSuffix is null")
+	}
+	cleanSuffix = suffix(cleanSuffix)
+	if cleanSuffix == "" {
+		return "", errorf("cleanSuffix is null")
+	}
+
+	if cleaning && maxDays < fwrite.MaxKeepDays { //最小为3天
+		return "", errorf("maxDays not less than 3 day")
+	}
+
+	if rw.fileCfg.FilePrefix == filePrefix &&
+		rw.fileCfg.WriteSuffix == writeSuffix &&
+		rw.fileCfg.RenameSuffix == renameSuffix &&
+		rw.fileCfg.CleanSuffix == cleanSuffix &&
+		rw.fileCfg.Cleaning == cleaning &&
+		rw.fileCfg.MaxDays == maxDays {
+		return rw.fileCfg.FileName, nil
+	}
+
+	rw.fileCfg.FilePrefix = filePrefix
+	rw.fileCfg.WriteSuffix = writeSuffix
+	rw.fileCfg.RenameSuffix = renameSuffix
+	rw.fileCfg.CleanSuffix = cleanSuffix
+	if rw.fileCfg.RotateRenameSuffix {
+		rw.fileCfg.RotateRename = writeSuffix != renameSuffix
+	} else {
+		rw.fileCfg.RotateRename = true
+	}
+	if rw.fileCfg.CleanRenameSuffix {
+		rw.fileCfg.CleanRename = writeSuffix != renameSuffix
+	} else {
+		rw.fileCfg.CleanRename = false
+	}
+	rw.fileCfg.MaxDays = maxDays
+
+	rw.fileCfg.FileName = rw.fileCfg.FilePrefix + rw.fileCfg.WriteSuffix
+	return rw.fileCfg.FileName, nil
 }
 
 //初始化行标志和标记
@@ -44,10 +127,10 @@ func (rw *BinFileReadWrite) InitLineMark(lineHead, lineTail string) error {
 	lineTail = strings.TrimSpace(lineTail)
 
 	if len(lineHead) < 0 {
-		return errorf("line head is null")
+		return ErrLineHeadNil
 	}
 	if len(lineTail) < 0 {
-		return errorf("line Tail is null")
+		return ErrLineTailNil
 	}
 
 	rw.lineHead = []byte(lineHead)
@@ -82,6 +165,8 @@ func (rw *BinFileReadWrite) Open(fileName string, fileSync bool) error {
 		return err
 	}
 
+	rw.lineEof.Reset()
+
 	if rw.fileName != "" && rw.fd != nil {
 		rw.fd.Close()
 	}
@@ -96,40 +181,60 @@ func (rw *BinFileReadWrite) Open(fileName string, fileSync bool) error {
 
 //关闭文件
 func (rw *BinFileReadWrite) Close() error {
-	if rw.fd != nil {
-		rw.fd.Close()
-		rw.fd = nil
-		rw.reader = nil
+	if rw.fd == nil || rw.reader == nil {
+		return ErrFileNotOpen
 	}
-	return errorf("file not open")
+	if e := rw.fd.Close(); e != nil {
+		return e
+	}
+	rw.fd = nil
+	rw.reader = nil
+	rw.lineEof.Reset()
+	return nil
 }
 
 //读取文件行
 //line  	是输入文件行
 func (rw *BinFileReadWrite) Read(line *FileLine) error {
 	if rw.fd == nil || rw.reader == nil {
-		return errorf("file not open")
+		return ErrFileNotOpen
+	}
+
+	if rw.lineEof.IsEof {
+		line.Clone(rw.lineEof)
+		return nil
 	}
 
 	line.Reset()
 	line.FileName = rw.fileName
 
-	//读取二进制数据头
-	var lineHeadByte = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	//读取二进制数据头           1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+	var lineHeadByte = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	e := rw.readFull(rw.reader, lineHeadByte) //读取行头
 	if e != nil {
 		return e
 	}
-	totalLen := int(binary.BigEndian.Uint32(lineHeadByte[:4]))
-	line.LineNO = int64(binary.BigEndian.Uint32(lineHeadByte[4:8]))
-	bordLen := int(binary.BigEndian.Uint32(lineHeadByte[8:12]))
-	if n := totalLen - len(lineHeadByte); bordLen >= n {
-		return errorf("bord size is greater than %d", n)
+
+	lineSize := int(binary.BigEndian.Uint32(lineHeadByte[:4]))
+	lineVer := lineHeadByte[4]
+	if lineVer != 1 {
+		return errorf("line version is't 1\n")
+	}
+	headSize := lineHeadByte[5]
+	if headSize != 8 {
+		return errorf("line head size is't 8\n")
+	}
+	markSize := lineHeadByte[6]
+	//space := lineHeadByte[7]
+	line.LineNO = int64(binary.BigEndian.Uint32(lineHeadByte[8:12]))
+	bordSize := int(binary.BigEndian.Uint32(lineHeadByte[12:16]))
+	if n := lineSize - FixSize - HeadSize - bordSize - int(markSize); n != 0 {
+		return errorf("line size mismatching")
 	}
 	//读取二进制数据
 	line.buff.Reset()
-	line.buff.Grow(bordLen)
-	buff := line.buff.Bytes()[:bordLen]
+	line.buff.Grow(bordSize)
+	buff := line.buff.Bytes()[:bordSize]
 	rw.readFull(rw.reader, buff) //读取二进制数据
 	if e != nil {
 		return e
@@ -138,16 +243,21 @@ func (rw *BinFileReadWrite) Read(line *FileLine) error {
 
 	//读取二进制数据标记
 	line.buff.Reset()
-	line.buff.Grow(totalLen - bordLen)
-	buff = line.buff.Bytes()[:totalLen-bordLen]
+	line.buff.Grow(int(markSize))
+	buff = line.buff.Bytes()[:markSize]
 	rw.readFull(rw.reader, buff) //读取二进制数据
 	if e != nil {
 		return e
 	}
 	line.Mark = trimMark(string(buff))
 	line.use = len(line.Mark)
-	line.free = totalLen - bordLen - line.use - 1
-	line.off = rw.readOff - int64(line.free) - 1
+	line.free = lineSize - FixSize - HeadSize - bordSize - line.use
+	line.off = rw.readOff - int64(line.free)
+	line.readFD = rw.fd
+	line.IsEof = line.LineNO == 0 && line.Mark == fwrite.FileEof
+	if line.IsEof {
+		rw.lineEof.Clone(line)
+	}
 	return nil
 }
 
@@ -170,7 +280,11 @@ func (rw *BinFileReadWrite) Locked() bool {
 //make  	是输入文件行标记
 func (rw *BinFileReadWrite) Mark(line *FileLine, mark string) error {
 	if rw.fd == nil || rw.reader == nil {
-		return errorf("file not open")
+		return ErrFileNotOpen
+	}
+
+	if line.readFD != rw.fd {
+		return ErrLineNotMatch
 	}
 
 	if line.off <= 0 {

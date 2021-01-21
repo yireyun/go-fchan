@@ -1,6 +1,7 @@
 package fchan
 
 import (
+	"math"
 	"strings"
 
 	"github.com/yireyun/go-fwrite"
@@ -19,27 +20,54 @@ type TxtFileWrite struct {
 	//行标记长度
 	lineMark string
 
+	fileEof []byte
+
+	tailEof []byte
+
 	cfg *FileConfig
 }
 
 //创建只写文件记录器
-//fileName	是出文件名
-//err   	是输出错误信息
+//name	是记录器名称
 func NewTxtFileWrite(name string) *TxtFileWrite {
 	w := new(TxtFileWrite)
-
 	w.lineHead = TxtLineHead
 	w.lineTail = TxtLineTail
 	w.lineMark = LineMark
-
-	w.cfg = new(FileConfig)
+	w.fileEof, w.tailEof = GetTxtLineEof(w.lineHead, w.lineTail)
+	w.cfg = NewFileConfig()
 	w.cfg.InitAsDefault(name)
-	w.cfg.RotateRenameSuffix = true
-	w.cfg.CleanRenameSuffix = true
-	w.cfg.FileLock = true
-	w.cfg.FileEof = nil
+	w.cfg.SetFileEof(nil) //暂不追加尾行
+	w.cfg.RotateRenameSuffix = true //初始为 true
+	w.cfg.CleanRenameSuffix = true  //初始为 true
+	w.cfg.FileLock = true           //初始为 true
 	w.InitFileWriter(name, w.cfg)
 	return w
+}
+
+//初始化
+//fileSync  	是输入是否同步写文件
+//filePrefix	是输入文件前缀
+//writeSuffix   是输入正在写文件后缀
+//renameSuffix  是输入重命名文件后缀
+//cleanSuffix	是输入清理文件名后缀
+//rotate    	是输入是否自动分割
+//dayend     	是输入是否文件日终
+//zeroSize  	是输入是否新文件零尺寸
+//maxLines   	是输入最大行数,最小为1行
+//maxSize   	是输入最大尺寸,最小为1M
+//cleaning     	是输入是否清理历史
+//maxDays		是输入最大天数,最小为3天
+func (w *TxtFileWrite) Init(fileSync bool, filePrefix string,
+	writeSuffix, renameSuffix, cleanSuffix string,
+	rotate, dayend, zeroSize bool, maxLines, maxSize int64,
+	cleaning bool, maxDays int, lastFiler LastFiler) (string, error) {
+
+	w.cfg.lastFile = lastFiler
+	return w.FileWrite.Init(fileSync, filePrefix,
+		writeSuffix, renameSuffix, cleanSuffix,
+		rotate, dayend, false, zeroSize, maxLines, maxSize,
+		cleaning, maxDays)
 }
 
 //初始化行标志和标记
@@ -51,18 +79,21 @@ func (w *TxtFileWrite) InitLineMark(lineHead, lineTail string, markSize int) err
 	lineTail = strings.TrimSpace(lineTail)
 
 	if len(lineHead) < 0 {
-		return errorf("line head is null")
+		return ErrLineHeadNil
 	}
 	if len(lineTail) < 0 {
-		return errorf("line Tail is null")
+		return ErrLineTailNil
 	}
 	if markSize < 32 {
-		return errorf("line mark len not less than 32")
+		return errorf("line mark len is not less than 32")
 	}
-
+	if markSize > 128 {
+		return errorf("line mark len is not great than 128")
+	}
+	w.lineMark = strings.Repeat(" ", markSize)
 	w.lineHead = lineHead
 	w.lineTail = lineTail
-	w.lineMark = strings.Repeat(" ", markSize)
+	w.fileEof, w.tailEof = GetTxtLineEof(w.lineHead, w.lineTail)
 	return nil
 }
 
@@ -76,7 +107,9 @@ func (w *TxtFileWrite) Write(line *FileLine) (err error) {
 	if len(line.Mark) > len(w.lineMark) {
 		return errorf("line mark len more than %v", len(w.lineMark))
 	}
-
+	if len(line.Line.Bytes()) > math.MaxInt32 {
+		return errorf("line bytes len is not great than MaxInt32")
+	}
 	line.buff.Reset()
 	in := line.Line.Bytes()
 	//检查没有换行符增加换行符
@@ -99,4 +132,10 @@ func (w *TxtFileWrite) Write(line *FileLine) (err error) {
 	//最后写入数据
 	_, err = w.cfg.MutexWriter(&w.FileWrite, line.buff.Bytes())
 	return
+}
+
+//关闭文件
+//err   	   	是输出错误信息
+func (w *TxtFileWrite) Close() (err error) {
+	return w.FileWrite.Close()
 }
