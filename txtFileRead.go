@@ -3,7 +3,6 @@ package fchan
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -45,10 +44,10 @@ func (rw *TxtFileReadWrite) InitLineMark(lineHead, lineTail string) error {
 	lineTail = strings.TrimSpace(lineTail)
 
 	if len(lineHead) < 0 {
-		return fmt.Errorf("line head is null")
+		return errorf("line head is null")
 	}
 	if len(lineTail) < 0 {
-		return fmt.Errorf("line Tail is null")
+		return errorf("line Tail is null")
 	}
 
 	rw.lineHead = []byte(lineHead)
@@ -89,14 +88,14 @@ func (rw *TxtFileReadWrite) Close() error {
 		rw.fd = nil
 		rw.reader = nil
 	}
-	return fmt.Errorf("file not open")
+	return errorf("file not open")
 }
 
 //读取文件行
 //line  	是输入文件行
 func (rw *TxtFileReadWrite) Read(line *FileLine) error {
 	if rw.fd == nil || rw.reader == nil {
-		return fmt.Errorf("file not open")
+		return errorf("file not open")
 	}
 
 	var b, head, tail []byte
@@ -116,14 +115,14 @@ func (rw *TxtFileReadWrite) Read(line *FileLine) error {
 		switch {
 		case bytes.HasPrefix(b, rw.lineHead): //发现行头
 			if len(head) > 0 { //行头重复
-				return fmt.Errorf("%s read line head repeat", rw.Name)
+				return errorf("%s read line head repeat", rw.Name)
 			}
 			head = make([]byte, len(b))                                  //初始化行头
 			copy(head, b)                                                //复制行头
 			lineNo := strings.TrimSpace(string(head[len(rw.lineHead):])) //截取行号
 			line.LineNO, e = strconv.ParseInt(lineNo, 10, 64)            //解析行号
 			if e != nil {                                                //判断解析结果
-				return fmt.Errorf("%s read line num error:%v", rw.Name, e)
+				return errorf("%s read line num error:%v", rw.Name, e)
 			}
 			tail = make([]byte, 0, len(b)+1+len(rw.lineMark)) //初始化行未
 			tail = append(tail, rw.lineTail...)               //设置行尾符号
@@ -131,10 +130,10 @@ func (rw *TxtFileReadWrite) Read(line *FileLine) error {
 			tail = append(tail, ';')                          //设置分隔符
 		case bytes.HasPrefix(b, rw.lineTail): //发现行未
 			if line.LineNO <= 0 { //行头缺少
-				return fmt.Errorf("%s read line head miss", rw.Name)
+				return errorf("%s read line head miss", rw.Name)
 			}
 			if !bytes.HasPrefix(b, tail) {
-				return fmt.Errorf("%s read line num not equi", rw.Name)
+				return errorf("%s read line num not equi", rw.Name)
 			}
 			line.Mark = trimMark(string(b[len(tail):]))       //设置行尾
 			line.use = len(line.Mark)                         //设置已用
@@ -143,11 +142,11 @@ func (rw *TxtFileReadWrite) Read(line *FileLine) error {
 			return nil
 		default:
 			if line.LineNO <= 0 { //行头缺少
-				return fmt.Errorf("%s read line head miss", rw.Name)
+				return errorf("%s read line head miss", rw.Name)
 			}
 			_, e = line.Line.Write(b)
 			if e != nil {
-				return fmt.Errorf("%s buff line error:%v", rw.Name, e)
+				return errorf("%s buff line error:%v", rw.Name, e)
 			}
 		}
 	}
@@ -173,18 +172,18 @@ func (rw *TxtFileReadWrite) Locked() bool {
 //make  	是输入文件行标记
 func (rw *TxtFileReadWrite) Mark(line *FileLine, mark string) error {
 	if rw.fd == nil || rw.reader == nil {
-		return fmt.Errorf("file not open")
+		return errorf("file not open")
 	}
 
 	if line.off <= 0 {
-		return fmt.Errorf("line off less equi than 0")
+		return errorf("line off less equi than 0")
 	}
 	if line.use < 0 {
-		return fmt.Errorf("line use less than 0")
+		return errorf("line use less than 0")
 	}
 	mark = strings.TrimSpace(mark)
 	if len(mark) > line.free {
-		return fmt.Errorf("line mark len more than %v", line.free)
+		return errorf("line mark len more than %v", line.free)
 	}
 	var e error
 	if line.use > 0 {

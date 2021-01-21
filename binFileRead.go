@@ -3,7 +3,6 @@ package fchan
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -45,10 +44,10 @@ func (rw *BinFileReadWrite) InitLineMark(lineHead, lineTail string) error {
 	lineTail = strings.TrimSpace(lineTail)
 
 	if len(lineHead) < 0 {
-		return fmt.Errorf("line head is null")
+		return errorf("line head is null")
 	}
 	if len(lineTail) < 0 {
-		return fmt.Errorf("line Tail is null")
+		return errorf("line Tail is null")
 	}
 
 	rw.lineHead = []byte(lineHead)
@@ -102,14 +101,14 @@ func (rw *BinFileReadWrite) Close() error {
 		rw.fd = nil
 		rw.reader = nil
 	}
-	return fmt.Errorf("file not open")
+	return errorf("file not open")
 }
 
 //读取文件行
 //line  	是输入文件行
 func (rw *BinFileReadWrite) Read(line *FileLine) error {
 	if rw.fd == nil || rw.reader == nil {
-		return fmt.Errorf("file not open")
+		return errorf("file not open")
 	}
 
 	line.Reset()
@@ -125,7 +124,7 @@ func (rw *BinFileReadWrite) Read(line *FileLine) error {
 	line.LineNO = int64(binary.BigEndian.Uint32(lineHeadByte[4:8]))
 	bordLen := int(binary.BigEndian.Uint32(lineHeadByte[8:12]))
 	if n := totalLen - len(lineHeadByte); bordLen >= n {
-		return fmt.Errorf("bord size is greater than %d", n)
+		return errorf("bord size is greater than %d", n)
 	}
 	//读取二进制数据
 	line.buff.Reset()
@@ -171,18 +170,18 @@ func (rw *BinFileReadWrite) Locked() bool {
 //make  	是输入文件行标记
 func (rw *BinFileReadWrite) Mark(line *FileLine, mark string) error {
 	if rw.fd == nil || rw.reader == nil {
-		return fmt.Errorf("file not open")
+		return errorf("file not open")
 	}
 
 	if line.off <= 0 {
-		return fmt.Errorf("line off less equi than 0")
+		return errorf("line off less equi than 0")
 	}
 	if line.use < 0 {
-		return fmt.Errorf("line use less than 0")
+		return errorf("line use less than 0")
 	}
 	mark = strings.TrimSpace(mark)
 	if len(mark) > line.free {
-		return fmt.Errorf("line mark len more than %v", line.free)
+		return errorf("line mark len more than %v", line.free)
 	}
 	var e error
 	if line.use > 0 {

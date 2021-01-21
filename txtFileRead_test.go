@@ -2,7 +2,6 @@ package fchan_test
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io"
 	"testing"
 	"time"

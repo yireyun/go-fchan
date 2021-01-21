@@ -1,7 +1,6 @@
 package fchan_test
 
 import (
-	"fmt"
 	"io"
 	"testing"
 	"time"

@@ -1,7 +1,6 @@
 package fchan
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/yireyun/go-fwrite"
@@ -52,13 +51,13 @@ func (w *TxtFileWrite) InitLineMark(lineHead, lineTail string, markSize int) err
 	lineTail = strings.TrimSpace(lineTail)
 
 	if len(lineHead) < 0 {
-		return fmt.Errorf("line head is null")
+		return errorf("line head is null")
 	}
 	if len(lineTail) < 0 {
-		return fmt.Errorf("line Tail is null")
+		return errorf("line Tail is null")
 	}
 	if markSize < 32 {
-		return fmt.Errorf("line mark len not less than 32")
+		return errorf("line mark len not less than 32")
 	}
 
 	w.lineHead = lineHead
@@ -75,7 +74,7 @@ func (w *TxtFileWrite) InitLineMark(lineHead, lineTail string, markSize int) err
 func (w *TxtFileWrite) Write(line *FileLine) (err error) {
 	line.Mark = strings.TrimSpace(line.Mark)
 	if len(line.Mark) > len(w.lineMark) {
-		return fmt.Errorf("line mark len more than %v", len(w.lineMark))
+		return errorf("line mark len more than %v", len(w.lineMark))
 	}
 
 	line.buff.Reset()
@@ -88,11 +87,11 @@ func (w *TxtFileWrite) Write(line *FileLine) (err error) {
 	//进行文件旋转检查
 	line.FileName, line.LineNO = w.cfg.RotateCheck(&w.FileWrite, len(in))
 	//写入行头
-	line.buff.WriteString(fmt.Sprintf("%s%d\n", w.lineHead, line.LineNO))
+	line.buff.WriteString(sprintf("%s%d\n", w.lineHead, line.LineNO))
 	//写入行内容
 	line.buff.Write(in)
 	//写入行尾
-	line.buff.WriteString(fmt.Sprintf("%s%d;", w.lineTail, line.LineNO))
+	line.buff.WriteString(sprintf("%s%d;", w.lineTail, line.LineNO))
 	mark := []byte(w.lineMark + "\n")
 	line.use = len(line.Mark)
 	copy(mark, line.Mark)

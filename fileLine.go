@@ -2,7 +2,6 @@ package fchan
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 )
 
@@ -41,7 +40,7 @@ func NewFileLine() *FileLine {
 }
 
 func (l *FileLine) String() string {
-	return fmt.Sprintf(`FileName:"%s", LineNO:%v, Mark:"%v", `+
+	return sprintf(`FileName:"%s", LineNO:%v, Mark:"%v", `+
 		`off:%v, use:%v, free:%v, Line:"%v"`,
 		l.FileName, l.LineNO, l.Mark, l.off, l.use, l.free,
 		strings.TrimSpace(string(l.Line.Bytes())))

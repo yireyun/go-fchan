@@ -2,7 +2,6 @@ package fchan
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 	"strings"
 
@@ -40,10 +39,10 @@ func NewBinFileWrite(name string) *BinFileWrite {
 //markSize	是输入行尾预留尺寸，不能小于32
 func (w *BinFileWrite) InitLineMark(markSize int) error {
 	if markSize < 32 {
-		return fmt.Errorf("line mark len is not less than 32")
+		return errorf("line mark len is not less than 32")
 	}
 	if markSize > 128 {
-		return fmt.Errorf("line mark len is not great than 128")
+		return errorf("line mark len is not great than 128")
 	}
 	w.lineMark = strings.Repeat(" ", markSize)
 	return nil
@@ -57,10 +56,10 @@ func (w *BinFileWrite) InitLineMark(markSize int) error {
 func (w *BinFileWrite) Write(line *FileLine) (err error) {
 	line.Mark = strings.TrimSpace(line.Mark)
 	if len(line.Mark) > len(w.lineMark) {
-		return fmt.Errorf("line mark len more than %v", len(w.lineMark))
+		return errorf("line mark len more than %v", len(w.lineMark))
 	}
 	if len(line.Line.Bytes()) > math.MaxInt32 {
-		return fmt.Errorf("line bytes len is not great than MaxInt32")
+		return errorf("line bytes len is not great than MaxInt32")
 	}
 	line.buff.Reset()
 	in := line.Line.Bytes()

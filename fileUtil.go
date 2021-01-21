@@ -1,6 +1,7 @@
 package fchan
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"unicode"
@@ -24,4 +25,16 @@ type FileWriter interface {
 
 func trimMark(s string) string {
 	return strings.TrimRightFunc(s, unicode.IsSpace)
+}
+
+func printf(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+}
+
+func sprintf(format string, args ...interface{}) string {
+	return fmt.Sprintf(format, args...)
+}
+
+func errorf(format string, args ...interface{}) error {
+	return fmt.Errorf(format, args...)
 }
