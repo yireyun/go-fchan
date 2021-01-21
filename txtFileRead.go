@@ -223,7 +223,7 @@ func (rw *TxtFileReadWrite) Read(line *FileLine) error {
 			tail = append(tail, lineNo...)                    //设置行号
 			tail = append(tail, ';')                          //设置分隔符
 		case bytes.HasPrefix(b, rw.lineTail): //发现行未
-			if line.LineNO <= 0 { //行头缺少
+			if line.LineNO < 0 { //行头缺少
 				return errorf("%s: read line head miss", rw.Name)
 			}
 			if !bytes.HasPrefix(b, tail) {
