@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"github.com/yireyun/go-flock"
-	"github.com/yireyun/go-fwrite"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/yireyun/go-flock"
+	"github.com/yireyun/go-fwrite"
 )
 
 //文件记录器

@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/wukehong/lock"
-	"github.com/yireyun/go-fwrite"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/wukehong/lock"
+	"github.com/yireyun/go-fwrite"
 )
 
 //文件记录器
