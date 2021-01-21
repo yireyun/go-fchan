@@ -31,8 +31,8 @@ type BinFileReadWrite struct {
 func NewBinFileReadWrite(name string) *BinFileReadWrite {
 	rw := new(BinFileReadWrite)
 	rw.Name = name
-	rw.lineHead = []byte(LineHead)
-	rw.lineTail = []byte(LineTail)
+	rw.lineHead = []byte(TxtLineHead)
+	rw.lineTail = []byte(TxtLineTail)
 	rw.lineMark = LineMark
 	return rw
 }

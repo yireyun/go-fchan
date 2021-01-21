@@ -8,9 +8,8 @@ import (
 
 var (
 	LineSize = 1024 //最大行尺寸
-	LineHead = "---"
-	LineTail = "==="
-	LineMark = strings.Repeat(" ", 64)
+	MarkSize = 64
+	LineMark = strings.Repeat(" ", MarkSize)
 	LinePool = sync.Pool{New: func() interface{} { return NewFileLine() }}
 )
 

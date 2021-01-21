@@ -31,8 +31,8 @@ type TxtFileReadWrite struct {
 func NewTxtFileReadWrite(name string) *TxtFileReadWrite {
 	rw := new(TxtFileReadWrite)
 	rw.Name = name
-	rw.lineHead = []byte(LineHead)
-	rw.lineTail = []byte(LineTail)
+	rw.lineHead = []byte(TxtLineHead)
+	rw.lineTail = []byte(TxtLineTail)
 	rw.lineMark = LineMark
 	return rw
 }

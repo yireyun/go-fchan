@@ -29,8 +29,8 @@ type TxtFileWrite struct {
 func NewTxtFileWrite(name string) *TxtFileWrite {
 	w := new(TxtFileWrite)
 
-	w.lineHead = LineHead
-	w.lineTail = LineTail
+	w.lineHead = TxtLineHead
+	w.lineTail = TxtLineTail
 	w.lineMark = LineMark
 
 	w.cfg = new(FileConfig)
