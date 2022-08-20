@@ -96,7 +96,9 @@ func (w *FileConfig) GetNewFileName() (string, error) {
 		}
 	} else {
 		fileDate, lastNum = now.Format("2006-01-02"), 1
-		printf("<ERROR> GetNewFileName FAIL : %v, %03v\n\n", fileDate, lastNum)
+		if w.lastFile != nil {
+			printf("<ERROR> GetNewFileName FAIL : %v, %03v\n\n", fileDate, lastNum)
+		}
 	}
 
 	for num := lastNum; num <= math.MaxInt16; num++ {
